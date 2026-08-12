@@ -116,11 +116,28 @@
 </div>
 
 <script>
-// Totais PREMIA BAND (GC.G2, rotas 211-227 — mista) — atualizar manualmente a cada rodada
-const PREMIA = {
+// Totais PREMIA BAND (GC.G2) — atualizar manualmente a cada rodada
+const PREMIA_TOTAL = {
   atualizadoEm: '12/08',
   cobertura: { label: 'Cobertura B2B', meta: 677, real: 293 },
   faturamento: { label: 'Faturamento B2B', meta: 1438587.68, real: 219949.32 }
+};
+// Só rotas 211-227 (mista) têm B2B — 231-234 (segmentada, SV.G2.3) usam outros indicadores
+const PREMIA_BY_ROTA = {
+  "211": {"cobertura": {"meta": 55, "real": 12}, "faturamento": {"meta": 138528.27, "real": 12216.4}},
+  "212": {"cobertura": {"meta": 39, "real": 7}, "faturamento": {"meta": 106466.53, "real": 12035.14}},
+  "213": {"cobertura": {"meta": 47, "real": 36}, "faturamento": {"meta": 89668.32, "real": 21439.92}},
+  "214": {"cobertura": {"meta": 44, "real": 13}, "faturamento": {"meta": 128082.76, "real": 13021.26}},
+  "215": {"cobertura": {"meta": 44, "real": 26}, "faturamento": {"meta": 62990.61, "real": 24948.41}},
+  "216": {"cobertura": {"meta": 47, "real": 19}, "faturamento": {"meta": 55228.97, "real": 11342.62}},
+  "217": {"cobertura": {"meta": 50, "real": 16}, "faturamento": {"meta": 58734.87, "real": 12147.27}},
+  "221": {"cobertura": {"meta": 50, "real": 16}, "faturamento": {"meta": 148245.75, "real": 40231.65}},
+  "222": {"cobertura": {"meta": 49, "real": 18}, "faturamento": {"meta": 137031.95, "real": 15227.11}},
+  "223": {"cobertura": {"meta": 47, "real": 27}, "faturamento": {"meta": 70834.0, "real": 14001.23}},
+  "224": {"cobertura": {"meta": 48, "real": 23}, "faturamento": {"meta": 151162.9, "real": 8488.91}},
+  "225": {"cobertura": {"meta": 51, "real": 25}, "faturamento": {"meta": 139147.37, "real": 13270.37}},
+  "226": {"cobertura": {"meta": 51, "real": 33}, "faturamento": {"meta": 81344.85, "real": 12590.95}},
+  "227": {"cobertura": {"meta": 55, "real": 22}, "faturamento": {"meta": 71120.53, "real": 8988.08}}
 };
 
 function fmtBRL(v){
@@ -128,10 +145,23 @@ function fmtBRL(v){
 }
 function fmtNum(v){ return v.toLocaleString('pt-BR'); }
 
-function renderPremiaKPIs(){
+function renderPremiaKPIs(rota){
   const el = document.getElementById('kpiRow');
   if(!el) return;
-  const items = [PREMIA.cobertura, PREMIA.faturamento];
+
+  if(rota && rota !== '__ALL__' && !PREMIA_BY_ROTA[rota]){
+    // rota segmentada (231-234): não tem indicador B2B
+    el.innerHTML = '<div class="kpiCard" style="flex:none;width:100%;text-align:center;color:var(--gray-dark);font-size:11px;">'+
+      'PREMIA BAND (B2B) não se aplica à rota '+rota+' — rota segmentada, sem esse indicador.</div>';
+    return;
+  }
+
+  const src = (rota && rota !== '__ALL__') ? PREMIA_BY_ROTA[rota] : PREMIA_TOTAL;
+  const label = (rota && rota !== '__ALL__') ? (' · Rota '+rota) : ' · GC.G2';
+  const items = [
+    { label: 'Cobertura B2B', ...src.cobertura },
+    { label: 'Faturamento B2B', ...src.faturamento }
+  ];
   el.innerHTML = items.map((it, idx) => {
     const dif = it.real - it.meta;
     const pct = it.meta ? Math.round((it.real / it.meta) * 1000) / 10 : 0;
@@ -144,7 +174,7 @@ function renderPremiaKPIs(){
         '<div class="item"><div class="lbl">Real</div><div class="val">' + fmt(it.real) + '</div></div>' +
         '<div class="item"><div class="lbl">Dif</div><div class="val dif ' + difClass + '">' + (dif>=0?'+':'') + fmt(dif) + '</div></div>' +
       '</div>' +
-      '<div class="kpiPct">' + pct + '% da meta · PREMIA BAND ' + PREMIA.atualizadoEm + '</div>' +
+      '<div class="kpiPct">' + pct + '% da meta · PREMIA BAND ' + PREMIA_TOTAL.atualizadoEm + label + '</div>' +
     '</div>';
   }).join('');
 }
@@ -297,6 +327,7 @@ function onBaseChange(){
   fillSelect(selRota, rotas, 'Todas as rotas');
   fillSelect(selDia, dias, 'Todos os dias');
   render();
+  renderPremiaKPIs(selRota.value);
 }
 
 function render(){
@@ -369,10 +400,9 @@ userNameInput.oninput = (e)=>{
   e.target.classList.remove('missing');
 };
 
-selRota.onchange = render;
+selRota.onchange = ()=>{ render(); renderPremiaKPIs(selRota.value); };
 selDia.onchange = render;
 onBaseChange();
-renderPremiaKPIs();
 syncFromSheet();
 setInterval(syncFromSheet, 45000); // re-sincroniza a cada 45s p/ ver marcações de outros aparelhos
 </script>
